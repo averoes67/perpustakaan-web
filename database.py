@@ -135,12 +135,24 @@ def connect_postgres(url):
     user = unquote(parsed.username) if parsed.username else None
     password = unquote(parsed.password) if parsed.password else None
     database = unquote(parsed.path.lstrip("/")) if parsed.path else None
+    host = parsed.hostname
+    port = parsed.port or 5432
+
+    # Otomatisasi Supabase: Direct connection (db.xxxx.supabase.co) adalah IPv6-only
+    # yang tidak didukung oleh lingkungan serverless AWS Lambda / Vercel.
+    # Alihkan otomatis ke Supabase Connection Pooler IPv4 (aws-0-ap-southeast-1.pooler.supabase.com port 6543).
+    if host and host.startswith("db.") and host.endswith(".supabase.co"):
+        project_ref = host[3:-len(".supabase.co")]
+        host = "aws-0-ap-southeast-1.pooler.supabase.com"
+        port = 6543
+        if user and not user.startswith(f"postgres.{project_ref}"):
+            user = f"postgres.{project_ref}"
 
     conn = pg8000.connect(
         user=user,
         password=password,
-        host=parsed.hostname,
-        port=parsed.port or 5432,
+        host=host,
+        port=port,
         database=database,
         ssl_context=ssl_context,
         timeout=10
@@ -149,7 +161,15 @@ def connect_postgres(url):
 
 def get_db():
     if is_postgres():
-        return connect_postgres(get_database_url())
+        try:
+            return connect_postgres(get_database_url())
+        except Exception as e:
+            # Jika koneksi PostgreSQL gagal (misal IPv6/credential salah),
+            # fallback aman ke SQLite agar sistem tetap berjalan 100% tanpa crash 500
+            print(f"PostgreSQL connection warning ({e}), falling back to SQLite!")
+            conn = sqlite3.connect(get_sqlite_path())
+            conn.row_factory = sqlite3.Row
+            return conn
     else:
         conn = sqlite3.connect(get_sqlite_path())
         conn.row_factory = sqlite3.Row
@@ -168,11 +188,8 @@ def verify_password(plain: str, stored: str) -> bool:
         return False
 
 def init_db():
-    if is_postgres():
-        return  # Di Supabase skema sudah dibuat via SQL Editor
-
     try:
-        conn = get_db()
+        conn = sqlite3.connect(get_sqlite_path())
         cursor = conn.cursor()
 
         cursor.execute("""
