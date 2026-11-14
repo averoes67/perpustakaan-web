@@ -186,17 +186,32 @@ async def home(request: Request):
         db_notice = f"Catatan Database: {e}"
         print(f"Notice on home route: {e}")
 
-    return templates.TemplateResponse(
-        request=request,
-        name="home.html",
-        context={
-            "active_page": "home",
-            "current_user": current_user,
-            "stats": stats,
-            "recent_books": recent_books,
-            "db_notice": db_notice
-        }
-    )
+    try:
+        return templates.TemplateResponse(
+            request=request,
+            name="home.html",
+            context={
+                "active_page": "home",
+                "current_user": current_user,
+                "stats": stats,
+                "recent_books": recent_books,
+                "db_notice": db_notice
+            }
+        )
+    except Exception as e:
+        err_detail = traceback.format_exc()
+        folder_contents = os.listdir(TEMPLATES_DIR) if os.path.exists(TEMPLATES_DIR) else 'Folder tidak ditemukan!'
+        return HTMLResponse(
+            content=f"""
+            <div style="font-family:sans-serif;padding:30px;background:#1e293b;color:white;border-radius:10px;">
+                <h2 style="color:#ef4444;">Gagal Me-render Template: {e}</h2>
+                <p>Direktori Templates saat ini: <code>{TEMPLATES_DIR}</code></p>
+                <p>Isi direktori: <code>{folder_contents}</code></p>
+                <pre style="background:#0f172a;padding:15px;color:#fca5a5;border-radius:6px;">{err_detail}</pre>
+            </div>
+            """,
+            status_code=500
+        )
 
 @app.get("/catalog", response_class=HTMLResponse)
 async def catalog(request: Request, q: str = None):

@@ -124,7 +124,8 @@ def connect_postgres(url):
         pass
 
     # Gunakan pg8000 (Pure Python, terbukti 100% stabil di Vercel)
-    import pg8000
+    import importlib
+    pg8000 = importlib.import_module("pg8000")
     from urllib.parse import unquote
     parsed = urlparse(url)
     ssl_context = ssl.create_default_context()
