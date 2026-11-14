@@ -65,11 +65,28 @@ class PostgresRow:
 class PostgresCursorWrapper:
     def __init__(self, cursor):
         self.cursor = cursor
+        self._lastrowid = None
 
     def execute(self, query, params=None):
+        self._lastrowid = None
         if params is not None:
             # Ganti placeholder '?' ke '%s' untuk PostgreSQL
             query = query.replace("?", "%s")
+
+        q_strip = query.strip()
+        # Jika query adalah INSERT INTO tunggal tanpa RETURNING, coba tambahkan RETURNING id
+        if q_strip.upper().startswith("INSERT INTO") and "RETURNING" not in q_strip.upper() and ";" not in q_strip.rstrip(";"):
+            try:
+                mod_query = q_strip.rstrip(";") + " RETURNING id"
+                res = self.cursor.execute(mod_query, params) if params is not None else self.cursor.execute(mod_query)
+                row = self.cursor.fetchone()
+                if row:
+                    self._lastrowid = row[0]
+                return res
+            except Exception:
+                pass
+
+        if params is not None:
             return self.cursor.execute(query, params)
         return self.cursor.execute(query)
 
@@ -97,7 +114,7 @@ class PostgresCursorWrapper:
 
     @property
     def lastrowid(self):
-        return getattr(self.cursor, "lastrowid", None)
+        return self._lastrowid if self._lastrowid is not None else getattr(self.cursor, "lastrowid", None)
 
 class PostgresConnectionWrapper:
     def __init__(self, conn):

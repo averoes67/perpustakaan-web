@@ -410,6 +410,11 @@ async def register_submit(
             VALUES (?, ?, ?, ?, 'ACTIVE')
         """, (member_code, full_name.strip(), email.strip(), phone.strip() if phone else None))
         new_member_id = cursor.lastrowid
+        if not new_member_id:
+            cursor.execute("SELECT id FROM members WHERE member_code = ?", (member_code.strip(),))
+            m_row = cursor.fetchone()
+            if m_row:
+                new_member_id = m_row["id"]
 
         # 2. Simpan ke tabel users (role visitor, linked to member_id)
         pw_hash = hash_password(password)
@@ -418,6 +423,11 @@ async def register_submit(
             VALUES (?, ?, ?, 'visitor', ?)
         """, (username.strip(), pw_hash, full_name.strip(), new_member_id))
         new_user_id = cursor.lastrowid
+        if not new_user_id:
+            cursor.execute("SELECT id FROM users WHERE username = ?", (username.strip(),))
+            u_row = cursor.fetchone()
+            if u_row:
+                new_user_id = u_row["id"]
 
         conn.commit()
 
@@ -912,6 +922,11 @@ async def admin_create_member(
         """, (member_code.strip(), name.strip(), email.strip(),
               phone.strip() if phone else None, status))
         new_member_id = cursor.lastrowid
+        if not new_member_id:
+            cursor.execute("SELECT id FROM members WHERE member_code = ?", (member_code.strip(),))
+            m_row = cursor.fetchone()
+            if m_row:
+                new_member_id = m_row["id"]
 
         # Buat akun user jika diminta
         if create_account and username and password:
