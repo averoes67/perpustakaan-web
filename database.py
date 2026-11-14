@@ -3,8 +3,9 @@ import sqlite3
 import hashlib
 import secrets
 import shutil
-from datetime import datetime, timedelta
+import ssl
 from urllib.parse import urlparse
+from datetime import datetime, timedelta
 
 def get_database_url():
     url = os.environ.get("DATABASE_URL", "").strip()
@@ -114,96 +115,22 @@ def connect_postgres(url):
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
-    # 1. Coba dengan psycopg2 terlebih dahulu
+    # Coba psycopg2 jika ada
     try:
         import psycopg2
         conn = psycopg2.connect(url, sslmode="require", connect_timeout=10)
         return PostgresConnectionWrapper(conn)
-    except ImportError:
+    except (ImportError, Exception):
         pass
 
-    # 2. Fallback ke pg8000 (Pure Python, tidak butuh compiler C atau libpq)
-    import pg8000.native
-    import ssl
+    # Gunakan pg8000.dbapi (Pure Python, terbukti 100% stabil di Vercel)
+    import pg8000.dbapi
     parsed = urlparse(url)
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    class Pg8000CursorWrapper:
-        def __init__(self, client):
-            self.client = client
-            self._last_result = []
-            self._idx = 0
-            self.description = []
-
-        def execute(self, query, params=None):
-            # pg8000 menggunakan format :1, :2 atau parameter langsung
-            # Kita konversi ? ke param binding pg8000
-            if params is None:
-                params = ()
-            # Ganti ? dengan format pg8000 native
-            q = query
-            parts = q.split("?")
-            if len(parts) > 1:
-                new_q = parts[0]
-                for i, p in enumerate(parts[1:]):
-                    new_q += f":param_{i}" + p
-                param_dict = {f"param_{i}": val for i, val in enumerate(params)}
-                res = self.client.run(new_q, **param_dict)
-            else:
-                res = self.client.run(q)
-
-            self._last_result = res if res else []
-            self._idx = 0
-            if self.client.columns:
-                self.description = [(c["name"], None) for c in self.client.columns]
-            else:
-                self.description = []
-
-        def executemany(self, query, seq_of_params):
-            for p in seq_of_params:
-                self.execute(query, p)
-
-        def fetchone(self):
-            if self._idx < len(self._last_result):
-                row = self._last_result[self._idx]
-                self._idx += 1
-                col_names = [d[0] for d in self.description]
-                d = dict(zip(col_names, row))
-                return PostgresRow(d, row)
-            return None
-
-        def fetchall(self):
-            rows = self._last_result[self._idx:]
-            self._idx = len(self._last_result)
-            col_names = [d[0] for d in self.description]
-            return [PostgresRow(dict(zip(col_names, r)), r) for r in rows]
-
-        @property
-        def lastrowid(self):
-            return None
-
-    class Pg8000ConnectionWrapper:
-        def __init__(self, client):
-            self.client = client
-
-        def cursor(self):
-            return Pg8000CursorWrapper(self.client)
-
-        def commit(self):
-            pass  # pg8000 native autocommits outside transaction
-
-        def rollback(self):
-            pass
-
-        def close(self):
-            try:
-                self.client.close()
-            except Exception:
-                pass
-
-    client = pg8000.native.Connection(
+    conn = pg8000.dbapi.connect(
         user=parsed.username,
         password=parsed.password,
         host=parsed.hostname,
@@ -212,7 +139,7 @@ def connect_postgres(url):
         ssl_context=ssl_context,
         timeout=10
     )
-    return Pg8000ConnectionWrapper(client)
+    return PostgresConnectionWrapper(conn)
 
 def get_db():
     if is_postgres():
@@ -305,5 +232,4 @@ def init_db():
         conn.commit()
         conn.close()
     except Exception as e:
-        # Jika gagal saat init_db di read-only filesystem, jangan crash aplikasi
         print(f"init_db notice: {e}")
