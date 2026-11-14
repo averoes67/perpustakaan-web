@@ -151,30 +151,51 @@ async def ping():
 @app.get("/api", response_class=HTMLResponse)
 @app.get("/api/index.py", response_class=HTMLResponse)
 async def home(request: Request):
-    current_user = get_current_user(request)
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT COUNT(*), COALESCE(SUM(total_copies),0) FROM books")
-    row = cursor.fetchone()
-    cursor.execute("SELECT COUNT(*) FROM members WHERE status='ACTIVE'")
-    total_members = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM loans")
-    total_loans = cursor.fetchone()[0]
-    cursor.execute("SELECT * FROM books ORDER BY id DESC LIMIT 6")
-    recent_books = cursor.fetchall()
-    conn.close()
-
+    current_user = None
     stats = {
-        "total_books": row[0],
-        "total_copies": row[1],
-        "total_members": total_members,
-        "total_loans": total_loans
+        "total_books": 0,
+        "total_copies": 0,
+        "total_members": 0,
+        "total_loans": 0
     }
+    recent_books = []
+    db_notice = None
+
+    try:
+        current_user = get_current_user(request)
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*), COALESCE(SUM(total_copies),0) FROM books")
+        row = cursor.fetchone()
+        cursor.execute("SELECT COUNT(*) FROM members WHERE status='ACTIVE'")
+        total_members = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM loans")
+        total_loans = cursor.fetchone()[0]
+        cursor.execute("SELECT * FROM books ORDER BY id DESC LIMIT 6")
+        recent_books = cursor.fetchall()
+        conn.close()
+
+        stats = {
+            "total_books": row[0] if row else 0,
+            "total_copies": row[1] if row else 0,
+            "total_members": total_members or 0,
+            "total_loans": total_loans or 0
+        }
+    except Exception as e:
+        db_notice = f"Catatan Database: {e}"
+        print(f"Notice on home route: {e}")
+
     return templates.TemplateResponse(
         request=request,
         name="home.html",
-        context={"active_page": "home", "current_user": current_user, "stats": stats, "recent_books": recent_books}
+        context={
+            "active_page": "home",
+            "current_user": current_user,
+            "stats": stats,
+            "recent_books": recent_books,
+            "db_notice": db_notice
+        }
     )
 
 @app.get("/catalog", response_class=HTMLResponse)

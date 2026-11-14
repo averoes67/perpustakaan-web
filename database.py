@@ -125,17 +125,22 @@ def connect_postgres(url):
 
     # Gunakan pg8000 (Pure Python, terbukti 100% stabil di Vercel)
     import pg8000
+    from urllib.parse import unquote
     parsed = urlparse(url)
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
+    user = unquote(parsed.username) if parsed.username else None
+    password = unquote(parsed.password) if parsed.password else None
+    database = unquote(parsed.path.lstrip("/")) if parsed.path else None
+
     conn = pg8000.connect(
-        user=parsed.username,
-        password=parsed.password,
+        user=user,
+        password=password,
         host=parsed.hostname,
         port=parsed.port or 5432,
-        database=parsed.path.lstrip("/"),
+        database=database,
         ssl_context=ssl_context,
         timeout=10
     )
