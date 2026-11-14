@@ -62,10 +62,10 @@ ON CONFLICT (member_code) DO NOTHING;
 -- SEED DATA AWAL USERS (password hash sha256 + salt standar perpustakaan)
 -- admin: admin123 | pengunjung: kunjungi123 | siti: siti123
 INSERT INTO users (username, password_hash, full_name, role, member_id) VALUES
-('admin', '7b4e3f1a2c5d8e90:d3f3b46cf3b7541f6f59bc8bb62463e271bf162b489aef454c5ee437a3c3065b', 'Administrator Perpustakaan', 'admin', NULL),
-('pengunjung', '7b4e3f1a2c5d8e90:a54050e50d603e8e2fa53a812338cb98fae73a00f162986422bdf9bc7fa3ec24', 'Ahmad Fauzi', 'visitor', 1),
-('siti', '7b4e3f1a2c5d8e90:f425b0be148ec78d212b1a7d656910609b4566c1f1ec42aa88c222ffda84ea82', 'Siti Rahma', 'visitor', 2)
-ON CONFLICT (username) DO NOTHING;
+('admin', 'f7756264088d164db3944cf2a7bdffb7:afac21d466abde6848329b9ccdbc7e2e99bb6a43c57ea16218a82caa987b9993', 'Administrator Perpustakaan', 'admin', NULL),
+('pengunjung', '664bb1e3842a26c55a1800ea5a4101a2:c6c899045bc33bfa13b34d8fb45d3dbc10c0ad09e22df4e05fdae8ae2b396e3d', 'Ahmad Fauzi', 'visitor', 1),
+('siti', '53ed1c50c9e70f77f87e637b9daf82bb:43f4fb749997357faad0c7e41071e47a8cdcccdb12deac0ba063ac27d871f95e', 'Siti Rahma', 'visitor', 2)
+ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- SEED DATA AWAL BUKU
 INSERT INTO books (isbn, title, author, publisher, category, year, shelf_location, cover_url, total_copies, available_copies) VALUES
