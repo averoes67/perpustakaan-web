@@ -140,13 +140,30 @@ def connect_postgres(url):
 
     # Otomatisasi Supabase: Direct connection (db.xxxx.supabase.co) adalah IPv6-only
     # yang tidak didukung oleh lingkungan serverless AWS Lambda / Vercel.
-    # Alihkan otomatis ke Supabase Connection Pooler IPv4 (aws-0-ap-southeast-1.pooler.supabase.com port 6543).
+    # Alihkan otomatis ke Supabase Connection Pooler IPv4.
     if host and host.startswith("db.") and host.endswith(".supabase.co"):
         project_ref = host[3:-len(".supabase.co")]
-        host = "aws-0-ap-southeast-1.pooler.supabase.com"
-        port = 6543
-        if user and not user.startswith(f"postgres.{project_ref}"):
-            user = f"postgres.{project_ref}"
+        # Coba region Tokyo (ap-northeast-1) terlebih dahulu sesuai alokasi IP, lalu Singapore
+        target_regions = ["ap-northeast-1", "ap-southeast-1"]
+        last_pooler_err = None
+        for reg in target_regions:
+            try:
+                p_host = f"aws-0-{reg}.pooler.supabase.com"
+                p_user = f"postgres.{project_ref}"
+                c = pg8000.connect(
+                    user=p_user,
+                    password=password,
+                    host=p_host,
+                    port=6543,
+                    database=database,
+                    ssl_context=ssl_context,
+                    timeout=5
+                )
+                return PostgresConnectionWrapper(c)
+            except Exception as pe:
+                last_pooler_err = pe
+        if last_pooler_err:
+            raise last_pooler_err
 
     conn = pg8000.connect(
         user=user,
@@ -225,8 +242,9 @@ def verify_password(plain: str, stored: str) -> bool:
 def seed_default_data(conn):
     try:
         cursor = conn.cursor()
-        # 1. Pastikan tabel dibuat jika di PostgreSQL
-        if is_postgres():
+        # 1. Pastikan tabel dibuat
+        is_pg = hasattr(conn, "conn") and not isinstance(conn, sqlite3.Connection)
+        if is_pg:
             try:
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS members (
@@ -281,7 +299,7 @@ def seed_default_data(conn):
                 print(f"PostgreSQL Table creation notice: {e}")
         else:
             try:
-                cursor.execute("""
+                cursor.executescript("""
                 CREATE TABLE IF NOT EXISTS members (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     member_code TEXT UNIQUE NOT NULL,
