@@ -48,13 +48,13 @@
                         <td class="px-5 py-4">
                             {% if loan.status == 'OVERDUE' %}
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Overdue</span>
-                                <div class="text-xs font-bold text-rose-600 mt-1">Denda: Rp {{ "{:,.0f}".format(loan.fine_amount) }}</div>
+                                <div class="text-xs font-bold text-rose-600 mt-1">Denda: Rp {{ "{:,.0f}".format(loan.fine_amount or 0) }}</div>
                             {% elif loan.status == 'BORROWED' %}
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Dipinjam</span>
                             {% else %}
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Dikembalikan</span>
-                                {% if loan.fine_amount > 0 %}
-                                <div class="text-xs text-slate-400">Denda Rp {{ "{:,.0f}".format(loan.fine_amount) }} (Lunas)</div>
+                                {% if (loan.fine_amount or 0) > 0 %}
+                                <div class="text-xs text-slate-400">Denda Rp {{ "{:,.0f}".format(loan.fine_amount or 0) }} (Lunas)</div>
                                 {% endif %}
                             {% endif %}
                         </td>

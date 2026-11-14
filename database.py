@@ -57,6 +57,11 @@ class PostgresRow:
     def __len__(self):
         return len(self._tuple)
 
+    def __getattr__(self, name):
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'PostgresRow' object has no attribute '{name}'")
+
 class PostgresCursorWrapper:
     def __init__(self, cursor):
         self.cursor = cursor

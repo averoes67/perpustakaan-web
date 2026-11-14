@@ -71,10 +71,10 @@
                         {% if loan.status == 'OVERDUE' %}
                         <p class="text-xs font-bold text-rose-600 mt-1">
                             <i class="fa-solid fa-triangle-exclamation mr-1"></i>
-                            Terlambat! Denda: Rp {{ "{:,.0f}".format(loan.fine_amount) }}
+                            Terlambat! Denda: Rp {{ "{:,.0f}".format(loan.fine_amount or 0) }}
                         </p>
-                        {% elif loan.status == 'RETURNED' and loan.fine_amount > 0 %}
-                        <p class="text-xs text-slate-400 mt-1">Denda dibayar: Rp {{ "{:,.0f}".format(loan.fine_amount) }}</p>
+                        {% elif loan.status == 'RETURNED' and (loan.fine_amount or 0) > 0 %}
+                        <p class="text-xs text-slate-400 mt-1">Denda dibayar: Rp {{ "{:,.0f}".format(loan.fine_amount or 0) }}</p>
                         {% endif %}
                     </div>
                 </div>

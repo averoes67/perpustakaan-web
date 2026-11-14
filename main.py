@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 import sqlite3
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from database import get_db, init_db, verify_password, hash_password, is_postgres, seed_default_data, get_last_postgres_error
 
 app = FastAPI(title="PustakaDigital — Sistem Informasi Perpustakaan")
@@ -102,19 +102,40 @@ def require_admin(request: Request):
         return user
     return None
 
+def parse_date(val):
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
+    if isinstance(val, str):
+        clean = val.split("T")[0].split(" ")[0].strip()
+        try:
+            return datetime.strptime(clean, "%Y-%m-%d").date()
+        except Exception:
+            try:
+                return datetime.fromisoformat(clean).date()
+            except Exception:
+                return None
+    return None
+
 def update_overdue_loans(conn):
-    cursor = conn.cursor()
-    today = datetime.now().date()
-    cursor.execute("SELECT id, due_date FROM loans WHERE status = 'BORROWED'")
-    for loan in cursor.fetchall():
-        due_date = datetime.strptime(loan["due_date"], "%Y-%m-%d").date()
-        if today > due_date:
-            days_late = (today - due_date).days
-            cursor.execute(
-                "UPDATE loans SET status='OVERDUE', fine_amount=? WHERE id=?",
-                (days_late * DAILY_FINE_RATE, loan["id"])
-            )
-    conn.commit()
+    try:
+        cursor = conn.cursor()
+        today = datetime.now().date()
+        cursor.execute("SELECT id, due_date FROM loans WHERE status = 'BORROWED'")
+        for loan in cursor.fetchall():
+            due_date = parse_date(loan["due_date"])
+            if due_date and today > due_date:
+                days_late = (today - due_date).days
+                cursor.execute(
+                    "UPDATE loans SET status='OVERDUE', fine_amount=? WHERE id=?",
+                    (days_late * DAILY_FINE_RATE, loan["id"])
+                )
+        conn.commit()
+    except Exception as e:
+        print(f"update_overdue_loans notice: {e}")
 
 # ─── PUBLIK ─────────────────────────────────────────────────────────────────
 
@@ -570,8 +591,8 @@ async def admin_return_loan(request: Request, loan_id: int):
 
     if loan and loan["status"] != "RETURNED":
         today = datetime.now().date()
-        due_date = datetime.strptime(loan["due_date"], "%Y-%m-%d").date()
-        fine = max(0, (today - due_date).days) * DAILY_FINE_RATE if today > due_date else 0.0
+        due_date = parse_date(loan["due_date"])
+        fine = max(0, (today - due_date).days) * DAILY_FINE_RATE if (due_date and today > due_date) else 0.0
 
         cursor.execute("""
             UPDATE loans SET return_date=?, status='RETURNED', fine_amount=?, fine_paid=1 WHERE id=?
@@ -696,8 +717,8 @@ async def visitor_return_loan(request: Request, loan_id: int):
 
     if loan and loan["status"] != "RETURNED":
         today = datetime.now().date()
-        due_date = datetime.strptime(loan["due_date"], "%Y-%m-%d").date()
-        fine = max(0, (today - due_date).days) * DAILY_FINE_RATE if today > due_date else 0.0
+        due_date = parse_date(loan["due_date"])
+        fine = max(0, (today - due_date).days) * DAILY_FINE_RATE if (due_date and today > due_date) else 0.0
 
         cursor.execute("""
             UPDATE loans SET return_date=?, status='RETURNED', fine_amount=?, fine_paid=1 WHERE id=?
