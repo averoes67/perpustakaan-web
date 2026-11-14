@@ -15,6 +15,20 @@
         </a>
     </div>
 
+    {% if success_msg %}
+    <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm flex items-center shadow-sm">
+        <i class="fa-solid fa-circle-check mr-3 text-lg"></i>
+        <span>{{ success_msg }}</span>
+    </div>
+    {% endif %}
+
+    {% if error_msg %}
+    <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center shadow-sm">
+        <i class="fa-solid fa-circle-exclamation mr-3 text-lg"></i>
+        <span>{{ error_msg }}</span>
+    </div>
+    {% endif %}
+
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-600">
@@ -27,6 +41,7 @@
                         <th class="px-5 py-4">Akun Login</th>
                         <th class="px-5 py-4">Status</th>
                         <th class="px-5 py-4">Pinjaman Aktif</th>
+                        <th class="px-5 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -64,9 +79,22 @@
                                 {{ m.active_loans }} buku
                             </span>
                         </td>
+                        <td class="px-5 py-4 text-right">
+                            {% if m.active_loans > 0 %}
+                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed" title="Tidak dapat dihapus saat masih meminjam buku">
+                                <i class="fa-solid fa-lock mr-1.5 text-xs"></i> Terkunci
+                            </span>
+                            {% else %}
+                            <form action="/admin/members/delete/{{ m.id }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus anggota \'{{ m.name }}\' ({{ m.member_code }})?\n\nData anggota dan akun login terkait akan dihapus secara permanen.')">
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-transparent rounded-lg transition shadow-sm">
+                                    <i class="fa-solid fa-trash-can mr-1.5"></i> Hapus
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">Belum ada anggota terdaftar.</td></tr>
+                    <tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">Belum ada anggota terdaftar.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

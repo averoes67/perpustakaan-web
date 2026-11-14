@@ -869,11 +869,59 @@ async def admin_members(request: Request):
     members = cursor.fetchall()
     conn.close()
 
+    member_success = request.session.pop("member_success", None)
+    member_error = request.session.pop("member_error", None)
+
     return templates.TemplateResponse(
         request=request,
         name="members.html",
-        context={"active_page": "members", "current_user": current_user, "members": members}
+        context={
+            "active_page": "members",
+            "current_user": current_user,
+            "members": members,
+            "success_msg": member_success,
+            "error_msg": member_error
+        }
     )
+
+@app.post("/admin/members/delete/{member_id}")
+async def admin_delete_member(request: Request, member_id: int):
+    current_user = require_admin(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM members WHERE id = ?", (member_id,))
+    member = cursor.fetchone()
+    if not member:
+        conn.close()
+        return RedirectResponse(url="/admin/members", status_code=303)
+
+    # Validasi pinjaman aktif
+    cursor.execute("SELECT COUNT(*) FROM loans WHERE member_id = ? AND status IN ('BORROWED','OVERDUE')", (member_id,))
+    active_loans = cursor.fetchone()[0]
+    if active_loans > 0:
+        conn.close()
+        request.session["member_error"] = f"Tidak dapat menghapus '{member['name']}' karena masih memiliki {active_loans} buku pinjaman yang belum dikembalikan!"
+        return RedirectResponse(url="/admin/members", status_code=303)
+
+    try:
+        # Hapus riwayat sirkulasi lama jika ada
+        cursor.execute("DELETE FROM loans WHERE member_id = ?", (member_id,))
+        # Hapus akun user terkait jika ada
+        cursor.execute("DELETE FROM users WHERE member_id = ?", (member_id,))
+        # Hapus anggota
+        cursor.execute("DELETE FROM members WHERE id = ?", (member_id,))
+        conn.commit()
+        request.session["member_success"] = f"Data anggota '{member['name']}' ({member['member_code']}) berhasil dihapus."
+    except Exception as e:
+        request.session["member_error"] = f"Gagal menghapus anggota: {str(e)}"
+    finally:
+        conn.close()
+
+    return RedirectResponse(url="/admin/members", status_code=303)
 
 @app.get("/admin/members/new", response_class=HTMLResponse)
 async def admin_new_member_form(request: Request):
