@@ -118,6 +118,34 @@ def update_overdue_loans(conn):
 
 # ─── PUBLIK ─────────────────────────────────────────────────────────────────
 
+# --- 0. DIAGNOSTIC / HEALTH CHECK ---
+@app.get("/ping")
+@app.get("/api/ping")
+@app.get("/api/index/ping")
+async def ping():
+    db_ok = False
+    db_err = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        row = cursor.fetchone()
+        db_ok = bool(row)
+        conn.close()
+    except Exception as e:
+        db_err = str(e)
+
+    return {
+        "status": "ok",
+        "app": "PustakaDigital",
+        "database_mode": "PostgreSQL (Supabase)" if is_postgres() else "SQLite",
+        "has_database_url": bool(os.environ.get("DATABASE_URL")),
+        "database_connection_ok": db_ok,
+        "database_error": db_err,
+        "templates_dir": TEMPLATES_DIR,
+        "templates_found": os.path.isdir(TEMPLATES_DIR)
+    }
+
 # --- 1. BERANDA (SUPPORT DIRECT & VERCEL SUBPATH) ---
 @app.get("/", response_class=HTMLResponse)
 @app.get("/api", response_class=HTMLResponse)
