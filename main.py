@@ -125,12 +125,20 @@ def update_overdue_loans(conn):
 async def ping():
     db_ok = False
     db_err = None
+    user_list = []
+    book_count = 0
     try:
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
         row = cursor.fetchone()
         db_ok = bool(row)
+
+        cursor.execute("SELECT username, role FROM users")
+        user_list = [f"{r[0]} ({r[1]})" for r in cursor.fetchall()]
+
+        cursor.execute("SELECT COUNT(*) FROM books")
+        book_count = cursor.fetchone()[0]
         conn.close()
     except Exception as e:
         db_err = str(e)
@@ -142,8 +150,10 @@ async def ping():
         "has_database_url": bool(os.environ.get("DATABASE_URL")),
         "database_connection_ok": db_ok,
         "database_error": db_err,
+        "users_in_database": user_list,
+        "book_count": book_count,
         "templates_dir": TEMPLATES_DIR,
-        "templates_found": os.path.isdir(TEMPLATES_DIR)
+        "templates_found": bool(TEMPLATES_DIR and os.path.isdir(TEMPLATES_DIR))
     }
 
 # --- 1. BERANDA (SUPPORT DIRECT & VERCEL SUBPATH) ---
