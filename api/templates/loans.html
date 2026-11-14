@@ -1,0 +1,81 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Sirkulasi Buku - Admin PustakaDigital{% endblock %}
+{% block breadcrumb %}Sirkulasi / Daftar Semua Transaksi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900">Data Sirkulasi Buku</h1>
+            <p class="text-slate-500 text-sm mt-0.5">Daftar peminjaman aktif, keterlambatan, dan riwayat pengembalian.</p>
+        </div>
+        <a href="/admin/loans/new" class="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition">
+            <i class="fa-solid fa-plus mr-2"></i> Peminjaman Baru
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-400 border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-4">Kode Transaksi</th>
+                        <th class="px-5 py-4">Anggota</th>
+                        <th class="px-5 py-4">Buku</th>
+                        <th class="px-5 py-4">Tgl Pinjam</th>
+                        <th class="px-5 py-4">Jatuh Tempo</th>
+                        <th class="px-5 py-4">Status & Denda</th>
+                        <th class="px-5 py-4 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for loan in loans %}
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="px-5 py-4 font-mono font-medium text-slate-900 text-xs">{{ loan.loan_code }}</td>
+                        <td class="px-5 py-4">
+                            <div class="font-medium text-slate-900 text-xs">{{ loan.member_name }}</div>
+                            <div class="text-xs text-slate-400">{{ loan.member_code }}</div>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="font-medium text-slate-800 text-xs">{{ loan.book_title }}</div>
+                            <div class="text-xs text-slate-400 font-mono">{{ loan.isbn }}</div>
+                        </td>
+                        <td class="px-5 py-4 text-xs">{{ loan.borrow_date }}</td>
+                        <td class="px-5 py-4 text-xs font-semibold {% if loan.status == 'OVERDUE' %}text-rose-600{% else %}text-slate-700{% endif %}">
+                            {{ loan.due_date }}
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if loan.status == 'OVERDUE' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Overdue</span>
+                                <div class="text-xs font-bold text-rose-600 mt-1">Denda: Rp {{ "{:,.0f}".format(loan.fine_amount) }}</div>
+                            {% elif loan.status == 'BORROWED' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Dipinjam</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Dikembalikan</span>
+                                {% if loan.fine_amount > 0 %}
+                                <div class="text-xs text-slate-400">Denda Rp {{ "{:,.0f}".format(loan.fine_amount) }} (Lunas)</div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            {% if loan.status != 'RETURNED' %}
+                            <form action="/admin/loans/return/{{ loan.id }}" method="POST" class="inline">
+                                <button type="submit" class="text-xs bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3 py-1.5 rounded-lg transition" onclick="return confirm('Proses pengembalian buku?')">
+                                    <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Kembalikan
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-xs text-slate-400 italic">Selesai</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">Belum ada riwayat peminjaman.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base_public.html" %}
+
+{% block title %}Katalog Buku (OPAC) - PustakaDigital{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Katalog Publik (OPAC)</h1>
+            <p class="text-slate-500 mt-1">Jelajahi seluruh koleksi buku perpustakaan secara bebas.</p>
+        </div>
+        {% if current_user and current_user.role == 'admin' %}
+        <a href="/admin/books/new" class="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition">
+            <i class="fa-solid fa-plus mr-2"></i> Tambah Buku Baru
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3">
+        <form action="/catalog" method="GET" class="flex-grow flex flex-col md:flex-row gap-3">
+            <div class="relative flex-grow">
+                <input type="text" name="q" value="{{ query or '' }}" placeholder="Cari berdasarkan judul, penulis, atau ISBN..."
+                       class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+            </div>
+            <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition">
+                Cari
+            </button>
+            {% if query %}
+            <a href="/catalog" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl text-center transition">
+                Reset
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Book Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {% for book in books %}
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+            <div class="h-48 w-full bg-slate-100 relative overflow-hidden">
+                <img src="{{ book.cover_url }}" alt="{{ book.title }}" class="w-full h-full object-cover">
+                <div class="absolute top-2 right-2">
+                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-white/90 text-slate-800 shadow-sm backdrop-blur">
+                        {{ book.category }}
+                    </span>
+                </div>
+            </div>
+            <div class="p-5 flex flex-col flex-grow">
+                <p class="text-xs font-mono text-slate-400">{{ book.isbn }}</p>
+                <h3 class="font-bold text-slate-900 text-base mt-1 line-clamp-1">{{ book.title }}</h3>
+                <p class="text-xs text-slate-600 mt-1"><i class="fa-solid fa-feather-pointed mr-1 text-slate-400"></i> {{ book.author }}</p>
+                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span><i class="fa-solid fa-map-pin mr-1 text-blue-500"></i> {{ book.shelf_location or 'Rak Umum' }}</span>
+                    <span>{{ book.year or '-' }}</span>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-slate-400">Tersedia: </span>
+                        <span class="text-sm font-bold {% if book.available_copies > 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                            {{ book.available_copies }} / {{ book.total_copies }}
+                        </span>
+                    </div>
+                    {% if current_user and current_user.role == 'admin' %}
+                        {% if book.available_copies > 0 %}
+                        <a href="/admin/loans/new?book_id={{ book.id }}" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition">
+                            Pinjamkan &rarr;
+                        </a>
+                        {% else %}
+                        <span class="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">Habis</span>
+                        {% endif %}
+                    {% elif current_user and current_user.role == 'visitor' %}
+                        {% if book.available_copies > 0 %}
+                        <a href="/borrow?book_id={{ book.id }}" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                            Pinjam Buku &rarr;
+                        </a>
+                        {% else %}
+                        <span class="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">Habis</span>
+                        {% endif %}
+                    {% else %}
+                        {% if book.available_copies > 0 %}
+                        <a href="/login?redirect=/borrow%3Fbook_id={{ book.id }}" title="Login untuk meminjam" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition flex items-center shadow-sm">
+                            <i class="fa-solid fa-right-to-bracket mr-1 text-[10px]"></i> Pinjam Buku
+                        </a>
+                        {% else %}
+                        <span class="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">Habis</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200">
+            <i class="fa-solid fa-book-open text-4xl text-slate-300"></i>
+            <p class="text-slate-500 font-medium mt-3">Tidak ada buku yang sesuai dengan pencarian.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

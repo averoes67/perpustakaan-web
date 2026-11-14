@@ -1,0 +1,86 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Tambah Buku Baru - Admin PustakaDigital{% endblock %}
+{% block breadcrumb %}Katalog / Tambah Buku Baru{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900">Tambah Buku ke Inventaris</h1>
+            <p class="text-slate-500 text-sm mt-0.5">Input informasi buku baru ke sistem katalog.</p>
+        </div>
+        <a href="/catalog" class="text-sm font-semibold text-slate-600 hover:text-slate-900">&larr; Kembali</a>
+    </div>
+
+    {% if error %}
+    <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center">
+        <i class="fa-solid fa-circle-exclamation mr-3 text-lg"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <form action="/admin/books/new" method="POST" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">ISBN <span class="text-rose-500">*</span></label>
+                    <input type="text" name="isbn" required placeholder="978-xxx-xxx-xxx-x" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Kategori <span class="text-rose-500">*</span></label>
+                    <select name="category" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Fiksi">Fiksi</option>
+                        <option value="Non-Fiksi">Non-Fiksi</option>
+                        <option value="Teknologi">Teknologi & Komputer</option>
+                        <option value="Sains">Sains & Matematika</option>
+                        <option value="Sejarah & Sastra">Sejarah & Sastra</option>
+                        <option value="Bisnis & Manajemen">Bisnis & Manajemen</option>
+                        <option value="Pengembangan Diri">Pengembangan Diri</option>
+                        <option value="Agama & Filsafat">Agama & Filsafat</option>
+                        <option value="Klasik">Klasik</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Judul Buku <span class="text-rose-500">*</span></label>
+                <input type="text" name="title" required placeholder="Judul lengkap buku" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Penulis <span class="text-rose-500">*</span></label>
+                    <input type="text" name="author" required placeholder="Nama penulis" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Penerbit</label>
+                    <input type="text" name="publisher" placeholder="Nama penerbit" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Tahun Terbit</label>
+                    <input type="number" name="year" value="2024" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Lokasi Rak</label>
+                    <input type="text" name="shelf_location" placeholder="Rak B-03" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Jumlah Eksemplar</label>
+                    <input type="number" name="total_copies" min="1" value="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">URL Cover (Opsional)</label>
+                <input type="url" name="cover_url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <a href="/catalog" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition">Batal</a>
+                <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition">
+                    Simpan Buku
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
