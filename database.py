@@ -214,72 +214,117 @@ def verify_password(plain: str, stored: str) -> bool:
         pass
     return False
 
+def seed_default_data(conn):
+    try:
+        cursor = conn.cursor()
+        # 1. Pastikan tabel dibuat jika di PostgreSQL
+        if is_postgres():
+            try:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS members (
+                    id SERIAL PRIMARY KEY,
+                    member_code VARCHAR(50) UNIQUE NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    phone VARCHAR(50),
+                    status VARCHAR(20) DEFAULT 'ACTIVE',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(100) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    full_name VARCHAR(255) NOT NULL,
+                    role VARCHAR(20) DEFAULT 'visitor',
+                    member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS books (
+                    id SERIAL PRIMARY KEY,
+                    isbn VARCHAR(50) UNIQUE NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    author VARCHAR(255) NOT NULL,
+                    publisher VARCHAR(255),
+                    category VARCHAR(100) NOT NULL,
+                    year INTEGER,
+                    shelf_location VARCHAR(100),
+                    cover_url TEXT,
+                    total_copies INTEGER DEFAULT 1,
+                    available_copies INTEGER DEFAULT 1,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS loans (
+                    id SERIAL PRIMARY KEY,
+                    loan_code VARCHAR(100) UNIQUE NOT NULL,
+                    member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                    borrow_date DATE NOT NULL,
+                    due_date DATE NOT NULL,
+                    return_date DATE,
+                    status VARCHAR(20) DEFAULT 'BORROWED',
+                    fine_amount NUMERIC(12, 2) DEFAULT 0.0,
+                    fine_paid INTEGER DEFAULT 0,
+                    notes TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+                conn.commit()
+            except Exception as e:
+                print(f"Table creation notice: {e}")
+
+        # 2. Cek apakah ada data users
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        if user_count == 0:
+            # Members
+            try:
+                cursor.execute("""
+                INSERT INTO members (member_code, name, email, phone, status) VALUES
+                ('M001', 'Ahmad Fauzi', 'ahmad.fauzi@example.com', '081234567890', 'ACTIVE'),
+                ('M002', 'Siti Rahma', 'siti.rahma@example.com', '081298765432', 'ACTIVE'),
+                ('M003', 'Budi Santoso', 'budi.santoso@example.com', '085712341234', 'ACTIVE')
+                """)
+                conn.commit()
+            except Exception as e:
+                print(f"Members seed notice: {e}")
+
+            # Users
+            admin_hash = hash_password("admin123")
+            pengunjung_hash = hash_password("kunjungi123")
+            siti_hash = hash_password("siti123")
+
+            cursor.execute("INSERT INTO users (username, password_hash, full_name, role, member_id) VALUES (?, ?, ?, ?, ?)",
+                           ('admin', admin_hash, 'Administrator Perpustakaan', 'admin', None))
+            cursor.execute("INSERT INTO users (username, password_hash, full_name, role, member_id) VALUES (?, ?, ?, ?, ?)",
+                           ('pengunjung', pengunjung_hash, 'Ahmad Fauzi', 'visitor', 1))
+            cursor.execute("INSERT INTO users (username, password_hash, full_name, role, member_id) VALUES (?, ?, ?, ?, ?)",
+                           ('siti', siti_hash, 'Siti Rahma', 'visitor', 2))
+            conn.commit()
+
+        # 3. Cek apakah ada data books
+        cursor.execute("SELECT COUNT(*) FROM books")
+        book_count = cursor.fetchone()[0]
+        if book_count == 0:
+            books_data = [
+                ('978-602-03-8591-4', 'Laskar Pelangi', 'Andrea Hirata', 'Bentang Pustaka', 'Fiksi', 2005, 'Rak A-01', 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80', 5, 4),
+                ('978-979-3062-79-2', 'Bumi Manusia', 'Pramoedya Ananta Toer', 'Hasta Mitra', 'Sejarah & Sastra', 1980, 'Rak A-02', 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&q=80', 3, 3),
+                ('978-0-13-235088-4', 'Clean Code', 'Robert C. Martin', 'Prentice Hall', 'Teknologi', 2008, 'Rak T-05', 'https://images.unsplash.com/photo-1532012164546-f432f2e3777a?w=400&q=80', 4, 3),
+                ('978-0-7432-7356-5', 'The Great Gatsby', 'F. Scott Fitzgerald', 'Scribner', 'Klasik', 1925, 'Rak K-01', 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&q=80', 2, 2),
+                ('978-602-291-412-4', 'Atomic Habits', 'James Clear', 'Penguin Books', 'Pengembangan Diri', 2018, 'Rak P-03', 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?w=400&q=80', 6, 5)
+            ]
+            for b in books_data:
+                cursor.execute("""
+                INSERT INTO books (isbn, title, author, publisher, category, year, shelf_location, cover_url, total_copies, available_copies)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, b)
+            conn.commit()
+    except Exception as e:
+        print(f"seed_default_data notice: {e}")
+
 def init_db():
     try:
-        conn = sqlite3.connect(get_sqlite_path())
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            member_code TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            phone TEXT,
-            status TEXT DEFAULT 'ACTIVE',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            role TEXT DEFAULT 'visitor',
-            member_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (member_id) REFERENCES members (id)
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS books (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            isbn TEXT UNIQUE NOT NULL,
-            title TEXT NOT NULL,
-            author TEXT NOT NULL,
-            publisher TEXT,
-            category TEXT NOT NULL,
-            year INTEGER,
-            shelf_location TEXT,
-            cover_url TEXT,
-            total_copies INTEGER DEFAULT 1,
-            available_copies INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS loans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            loan_code TEXT UNIQUE NOT NULL,
-            member_id INTEGER NOT NULL,
-            book_id INTEGER NOT NULL,
-            borrow_date DATE NOT NULL,
-            due_date DATE NOT NULL,
-            return_date DATE,
-            status TEXT DEFAULT 'BORROWED',
-            fine_amount REAL DEFAULT 0.0,
-            fine_paid INTEGER DEFAULT 0,
-            notes TEXT,
-            FOREIGN KEY (member_id) REFERENCES members (id),
-            FOREIGN KEY (book_id) REFERENCES books (id)
-        )
-        """)
-
-        conn.commit()
+        conn = get_db()
+        seed_default_data(conn)
         conn.close()
     except Exception as e:
         print(f"init_db notice: {e}")

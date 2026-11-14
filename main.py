@@ -6,7 +6,7 @@ import os
 import sqlite3
 import traceback
 from datetime import datetime, timedelta
-from database import get_db, init_db, verify_password, hash_password, is_postgres
+from database import get_db, init_db, verify_password, hash_password, is_postgres, seed_default_data
 
 app = FastAPI(title="PustakaDigital — Sistem Informasi Perpustakaan")
 
@@ -134,6 +134,11 @@ async def ping():
         row = cursor.fetchone()
         db_ok = bool(row)
 
+        cursor.execute("SELECT COUNT(*) FROM users")
+        uc = cursor.fetchone()[0]
+        if uc == 0:
+            seed_default_data(conn)
+
         cursor.execute("SELECT username, role FROM users")
         user_list = [f"{r[0]} ({r[1]})" for r in cursor.fetchall()]
 
@@ -155,6 +160,26 @@ async def ping():
         "templates_dir": TEMPLATES_DIR,
         "templates_found": bool(TEMPLATES_DIR and os.path.isdir(TEMPLATES_DIR))
     }
+
+@app.get("/seed-db")
+async def seed_endpoint():
+    try:
+        conn = get_db()
+        seed_default_data(conn)
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, role FROM users")
+        users = [f"{r[0]} ({r[1]})" for r in cursor.fetchall()]
+        cursor.execute("SELECT COUNT(*) FROM books")
+        bcount = cursor.fetchone()[0]
+        conn.close()
+        return {
+            "status": "success",
+            "message": "Database berhasil diinisialisasi dan di-seed dengan data default!",
+            "users": users,
+            "book_count": bcount
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # --- 1. BERANDA (SUPPORT DIRECT & VERCEL SUBPATH) ---
 @app.get("/", response_class=HTMLResponse)
@@ -262,6 +287,18 @@ async def login_submit(
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = ?", (username.strip(),))
     user = cursor.fetchone()
+
+    # Jika user tidak ditemukan, periksa apakah database belum di-seed
+    if not user:
+        try:
+            cursor.execute("SELECT COUNT(*) FROM users")
+            if cursor.fetchone()[0] == 0:
+                seed_default_data(conn)
+                cursor.execute("SELECT * FROM users WHERE username = ?", (username.strip(),))
+                user = cursor.fetchone()
+        except Exception:
+            pass
+
     conn.close()
 
     if user and verify_password(password, user["password_hash"]):
