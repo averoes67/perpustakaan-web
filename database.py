@@ -123,14 +123,14 @@ def connect_postgres(url):
     except (ImportError, Exception):
         pass
 
-    # Gunakan pg8000.dbapi (Pure Python, terbukti 100% stabil di Vercel)
-    import pg8000.dbapi
+    # Gunakan pg8000 (Pure Python, terbukti 100% stabil di Vercel)
+    import pg8000
     parsed = urlparse(url)
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    conn = pg8000.dbapi.connect(
+    conn = pg8000.connect(
         user=parsed.username,
         password=parsed.password,
         host=parsed.hostname,
