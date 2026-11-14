@@ -6,7 +6,7 @@ import os
 import sqlite3
 import traceback
 from datetime import datetime, timedelta
-from database import get_db, init_db, verify_password, hash_password, is_postgres, seed_default_data
+from database import get_db, init_db, verify_password, hash_password, is_postgres, seed_default_data, get_last_postgres_error
 
 app = FastAPI(title="PustakaDigital — Sistem Informasi Perpustakaan")
 
@@ -155,6 +155,7 @@ async def ping():
         "has_database_url": bool(os.environ.get("DATABASE_URL")),
         "database_connection_ok": db_ok,
         "database_error": db_err,
+        "postgres_connect_error": get_last_postgres_error(),
         "users_in_database": user_list,
         "book_count": book_count,
         "templates_dir": TEMPLATES_DIR,

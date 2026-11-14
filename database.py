@@ -159,13 +159,21 @@ def connect_postgres(url):
     )
     return PostgresConnectionWrapper(conn)
 
+LAST_POSTGRES_ERROR = None
+
+def get_last_postgres_error():
+    global LAST_POSTGRES_ERROR
+    return LAST_POSTGRES_ERROR
+
 def get_db():
+    global LAST_POSTGRES_ERROR
     if is_postgres():
         try:
             return connect_postgres(get_database_url())
         except Exception as e:
             # Jika koneksi PostgreSQL gagal (misal IPv6/credential salah),
             # fallback aman ke SQLite agar sistem tetap berjalan 100% tanpa crash 500
+            LAST_POSTGRES_ERROR = str(e)
             print(f"PostgreSQL connection warning ({e}), falling back to SQLite!")
             conn = sqlite3.connect(get_sqlite_path())
             conn.row_factory = sqlite3.Row
@@ -270,7 +278,62 @@ def seed_default_data(conn):
                 """)
                 conn.commit()
             except Exception as e:
-                print(f"Table creation notice: {e}")
+                print(f"PostgreSQL Table creation notice: {e}")
+        else:
+            try:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS members (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    member_code TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    phone TEXT,
+                    status TEXT DEFAULT 'ACTIVE',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    full_name TEXT NOT NULL,
+                    role TEXT DEFAULT 'visitor',
+                    member_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (member_id) REFERENCES members (id)
+                );
+                CREATE TABLE IF NOT EXISTS books (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    isbn TEXT UNIQUE NOT NULL,
+                    title TEXT NOT NULL,
+                    author TEXT NOT NULL,
+                    publisher TEXT,
+                    category TEXT NOT NULL,
+                    year INTEGER,
+                    shelf_location TEXT,
+                    cover_url TEXT,
+                    total_copies INTEGER DEFAULT 1,
+                    available_copies INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS loans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    loan_code TEXT UNIQUE NOT NULL,
+                    member_id INTEGER NOT NULL,
+                    book_id INTEGER NOT NULL,
+                    borrow_date DATE NOT NULL,
+                    due_date DATE NOT NULL,
+                    return_date DATE,
+                    status TEXT DEFAULT 'BORROWED',
+                    fine_amount REAL DEFAULT 0.0,
+                    fine_paid INTEGER DEFAULT 0,
+                    notes TEXT,
+                    FOREIGN KEY (member_id) REFERENCES members (id),
+                    FOREIGN KEY (book_id) REFERENCES books (id)
+                );
+                """)
+                conn.commit()
+            except Exception as e:
+                print(f"SQLite Table creation notice: {e}")
 
         # 2. Cek apakah ada data users
         cursor.execute("SELECT COUNT(*) FROM users")
