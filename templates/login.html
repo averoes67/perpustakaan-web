@@ -7,29 +7,34 @@
     <title>Masuk — PustakaDigital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { primary: '#1e3a8a' } } }
+        }
+    </script>
 </head>
 
-<body
-    class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center px-4">
+<body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 flex items-center justify-center px-4 py-12">
 
-    <div class="w-full max-w-sm">
-        <!-- Logo -->
+    <div class="w-full max-w-md">
+        <!-- Logo & Header -->
         <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                <i class="fa-solid fa-book-bookmark text-amber-400 text-3xl"></i>
-            </div>
-            <h1 class="text-2xl font-extrabold text-white">PustakaDigital</h1>
-            <p class="text-blue-300 text-sm mt-1">Masuk untuk melanjutkan</p>
+            <a href="/" class="inline-block group">
+                <div class="w-16 h-16 bg-white/10 group-hover:bg-white/15 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xl backdrop-blur transition duration-200">
+                    <i class="fa-solid fa-book-bookmark text-amber-400 text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-white tracking-tight">PustakaDigital</h1>
+            </a>
+            <p class="text-blue-200 text-sm mt-1">Masuk untuk mengakses layanan perpustakaan</p>
         </div>
 
         <!-- Form Card -->
-        <div class="bg-white rounded-3xl shadow-2xl p-8">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 sm:p-9 border border-white/20">
 
             {% if error %}
-            <div
-                class="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center">
-                <i class="fa-solid fa-circle-exclamation mr-2 text-rose-500"></i>
-                {{ error }}
+            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center shadow-sm">
+                <i class="fa-solid fa-circle-exclamation mr-3 text-rose-500 text-base shrink-0"></i>
+                <span>{{ error }}</span>
             </div>
             {% endif %}
 
@@ -37,53 +42,70 @@
                 {% if redirect %}
                 <input type="hidden" name="redirect" value="{{ redirect }}">
                 {% endif %}
+
+                <!-- Username -->
                 <div>
-                    <label
-                        class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Username</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Username</label>
                     <div class="relative">
-                        <input type="text" name="username" required placeholder="masukkan username"
-                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50">
-                        <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-                    </div>
-                </div>
-                <div>
-                    <label
-                        class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Password</label>
-                    <div class="relative">
-                        <input type="password" name="password" required placeholder="masukkan password"
-                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50">
-                        <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                        <input type="text" name="username" required placeholder="Masukkan username Anda" autofocus
+                               class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 transition">
+                        <i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-400 text-sm"></i>
                     </div>
                 </div>
 
+                <!-- Password -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Password</label>
+                    <div class="relative">
+                        <input type="password" name="password" id="passwordInput" required placeholder="Masukkan password Anda"
+                               class="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 transition">
+                        <i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-400 text-sm"></i>
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <i id="eyeIcon" class="fa-regular fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tombol Submit -->
                 <button type="submit"
-                        class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition duration-200 text-sm flex items-center justify-center cursor-pointer">
+                        class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition duration-200 text-sm flex items-center justify-center cursor-pointer mt-2">
                     <i class="fa-solid fa-right-to-bracket mr-2"></i> Masuk
                 </button>
             </form>
 
-            <!-- Hint akun -->
-            <div class="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
-                <p class="font-semibold text-slate-700 mb-2">Akun Demo Cepat:</p>
-                <p><strong>Admin:</strong> admin / admin123</p>
-                <p><strong>Pengunjung:</strong> pengunjung / kunjungi123</p>
-            </div>
-
-            <!-- Tautan Daftar Anggota Baru -->
-            <div class="mt-5 pt-4 border-t border-slate-100 text-center">
-                <p class="text-xs text-slate-500">Belum menjadi anggota perpustakaan?</p>
-                <a href="/register{% if redirect %}?redirect={{ redirect }}{% endif %}" class="mt-1.5 inline-block text-xs font-bold text-blue-600 hover:text-blue-800">
-                    <i class="fa-solid fa-user-plus mr-1"></i> Daftar Anggota Baru Sekarang &rarr;
+            <!-- Pembatas & Pendaftaran -->
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center space-y-3">
+                <p class="text-xs text-slate-500">Belum memiliki akun perpustakaan?</p>
+                <a href="/register{% if redirect %}?redirect={{ redirect }}{% endif %}" 
+                   class="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm">
+                    <i class="fa-solid fa-user-plus mr-2 text-blue-500"></i> Daftar Anggota Baru Sekarang
                 </a>
             </div>
 
-            <div class="mt-4 text-center">
-                <a href="/" class="text-xs text-slate-400 hover:text-blue-600 transition">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Beranda
+            <!-- Kembali ke Beranda -->
+            <div class="mt-6 text-center">
+                <a href="/" class="inline-flex items-center text-xs text-slate-400 hover:text-slate-600 transition">
+                    <i class="fa-solid fa-arrow-left mr-1.5"></i> Kembali ke Beranda
                 </a>
             </div>
         </div>
     </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const input = document.getElementById('passwordInput');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 
 </body>
 
