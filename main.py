@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Request, Form, Response
+from fastapi import FastAPI, Request, Form, Response, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 import os
 import sqlite3
 import traceback
+import base64
 from datetime import datetime, date, timedelta
 from database import get_db, init_db, verify_password, hash_password, is_postgres, seed_default_data, get_last_postgres_error
 
@@ -635,14 +636,32 @@ async def admin_create_book(
     year: int = Form(2024),
     shelf_location: str = Form(None),
     total_copies: int = Form(1),
-    cover_url: str = Form(None)
+    cover_url: str = Form(None),
+    cover_base64: str = Form(None),
+    cover_file: UploadFile = File(None)
 ):
     current_user = require_admin(request)
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
-    if not cover_url or not cover_url.strip():
-        cover_url = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80"
+    final_cover = None
+    if cover_base64 and cover_base64.strip() and cover_base64.strip().startswith("data:image"):
+        final_cover = cover_base64.strip()
+    elif cover_file and cover_file.filename:
+        try:
+            content = await cover_file.read()
+            if content and len(content) > 0:
+                ct = cover_file.content_type or "image/jpeg"
+                b64 = base64.b64encode(content).decode("utf-8")
+                final_cover = f"data:{ct};base64,{b64}"
+        except Exception as e:
+            print(f"Cover upload read notice: {e}")
+
+    if not final_cover and cover_url and cover_url.strip():
+        final_cover = cover_url.strip()
+
+    if not final_cover:
+        final_cover = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -654,7 +673,7 @@ async def admin_create_book(
               publisher.strip() if publisher else None,
               category, year,
               shelf_location.strip() if shelf_location else None,
-              cover_url.strip(), total_copies, total_copies))
+              final_cover, total_copies, total_copies))
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()

@@ -21,7 +21,7 @@
     {% endif %}
 
     <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-        <form action="/admin/books/new" method="POST" class="space-y-5">
+        <form action="/admin/books/new" method="POST" enctype="multipart/form-data" class="space-y-5">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">ISBN <span class="text-rose-500">*</span></label>
@@ -70,17 +70,186 @@
                     <input type="number" name="total_copies" min="1" value="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">URL Cover (Opsional)</label>
-                <input type="url" name="cover_url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+            <!-- Upload Foto Sampul Buku -->
+            <div class="pt-4 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <i class="fa-solid fa-camera mr-1.5 text-blue-600"></i> Foto / Sampul Depan Buku (Opsional)
+                    </label>
+                    <button type="button" id="toggleUrlBtn" onclick="toggleCoverMode()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold transition">
+                        <i class="fa-solid fa-link mr-1"></i> Gunakan Tautan URL
+                    </button>
+                </div>
+
+                <!-- Hidden input untuk Base64 terkompresi otomatis -->
+                <input type="hidden" name="cover_base64" id="cover_base64">
+
+                <!-- Mode 1: Upload File / Ambil Foto Langsung -->
+                <div id="uploadModeContainer" class="space-y-3">
+                    <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/40 rounded-2xl p-6 text-center transition cursor-pointer relative">
+                        <input type="file" name="cover_file" id="cover_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
+                        
+                        <div id="uploadPrompt" class="space-y-2">
+                            <div class="w-14 h-14 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-800">Klik untuk ambil foto / pilih dari perangkat</p>
+                                <p class="text-xs text-slate-500 mt-0.5">Mendukung format JPG, PNG, WEBP &bull; Bisa langsung dari kamera HP</p>
+                            </div>
+                            <span class="inline-block px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 transition">
+                                <i class="fa-solid fa-folder-open mr-1.5 text-blue-500"></i> Pilih File Foto
+                            </span>
+                        </div>
+
+                        <!-- Pratinjau Foto Sampul Buku -->
+                        <div id="previewContainer" class="hidden flex flex-col sm:flex-row items-center justify-center gap-5 text-left">
+                            <div class="w-28 h-36 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-white shrink-0 ring-1 ring-slate-200">
+                                <img id="coverPreview" src="" alt="Pratinjau Sampul" class="w-full h-full object-cover">
+                            </div>
+                            <div class="space-y-2 text-center sm:text-left">
+                                <div class="flex items-center justify-center sm:justify-start space-x-2">
+                                    <span class="text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">
+                                        <i class="fa-solid fa-circle-check mr-1"></i> Foto Siap
+                                    </span>
+                                    <span id="fileSizeLabel" class="text-xs text-slate-400 font-mono"></span>
+                                </div>
+                                <p id="fileNameLabel" class="text-sm font-semibold text-slate-800 break-all max-w-xs"></p>
+                                <p class="text-xs text-slate-500">Foto sampul akan otomatis dioptimalkan dan disimpan ke katalog buku.</p>
+                                <button type="button" onclick="removeSelectedFile(event)" class="mt-1 text-xs text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center px-3 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                                    <i class="fa-solid fa-trash-can mr-1.5"></i> Ganti / Hapus Foto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 2: Input URL Online -->
+                <div id="urlModeContainer" class="hidden space-y-2 mt-2">
+                    <div class="relative">
+                        <input type="url" name="cover_url" id="cover_url" placeholder="https://images.unsplash.com/... atau URL gambar lainnya" 
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               oninput="previewFromUrl(this.value)">
+                        <i class="fa-solid fa-link absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <div id="urlPreviewBox" class="hidden mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <img id="urlPreviewImg" src="" alt="URL Preview" class="w-12 h-16 object-cover rounded-lg border border-slate-200">
+                        <div class="text-xs text-slate-600">
+                            <span class="font-semibold text-emerald-600"><i class="fa-solid fa-check mr-1"></i>URL Gambar Siap Digunakan</span>
+                            <p class="text-slate-400 text-[11px] truncate max-w-md" id="urlPreviewText"></p>
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
                 <a href="/catalog" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition">Batal</a>
                 <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition">
-                    Simpan Buku
+                    <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Buku
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+let useUrlMode = false;
+
+function toggleCoverMode() {
+    useUrlMode = !useUrlMode;
+    const uploadCont = document.getElementById('uploadModeContainer');
+    const urlCont = document.getElementById('urlModeContainer');
+    const toggleBtn = document.getElementById('toggleUrlBtn');
+    
+    if (useUrlMode) {
+        uploadCont.classList.add('hidden');
+        urlCont.classList.remove('hidden');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-camera mr-1"></i> Upload / Ambil Foto';
+    } else {
+        uploadCont.classList.remove('hidden');
+        urlCont.classList.add('hidden');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-link mr-1"></i> Gunakan Tautan URL';
+    }
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Mohon pilih file gambar yang valid (JPG, PNG, WEBP).');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const rawDataUrl = e.target.result;
+        
+        // Kompresi client-side menggunakan HTML5 Canvas
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxDim = 800; // maksimal 800px dimensi
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Export to JPEG 82% quality
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            document.getElementById('cover_base64').value = compressedDataUrl;
+
+            // Tampilkan preview
+            document.getElementById('coverPreview').src = compressedDataUrl;
+            document.getElementById('uploadPrompt').classList.add('hidden');
+            document.getElementById('previewContainer').classList.remove('hidden');
+            document.getElementById('fileNameLabel').textContent = file.name;
+            
+            const approxKb = Math.round((compressedDataUrl.length * 3 / 4) / 1024);
+            document.getElementById('fileSizeLabel').textContent = '~' + approxKb + ' KB';
+        };
+        img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeSelectedFile(event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    document.getElementById('cover_file').value = '';
+    document.getElementById('cover_base64').value = '';
+    document.getElementById('coverPreview').src = '';
+    document.getElementById('previewContainer').classList.add('hidden');
+    document.getElementById('uploadPrompt').classList.remove('hidden');
+}
+
+function previewFromUrl(url) {
+    const box = document.getElementById('urlPreviewBox');
+    const img = document.getElementById('urlPreviewImg');
+    const text = document.getElementById('urlPreviewText');
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        img.src = url;
+        text.textContent = url;
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
+}
+</script>
 {% endblock %}
