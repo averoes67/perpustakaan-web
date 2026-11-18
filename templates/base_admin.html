@@ -14,11 +14,14 @@
 </head>
 <body class="bg-slate-100 text-slate-800 flex min-h-screen">
 
+    <!-- Mobile Backdrop Overlay -->
+    <div id="adminBackdrop" onclick="closeAdminSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
+
     <!-- Sidebar Admin -->
-    <aside class="w-64 bg-primary text-white flex flex-col fixed h-full shadow-xl z-40">
-        <div class="p-5 border-b border-blue-800">
+    <aside id="adminSidebar" class="w-64 bg-primary text-white flex flex-col fixed h-full shadow-2xl z-50 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-5 border-b border-blue-800 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
                     <i class="fa-solid fa-book-bookmark text-amber-400 text-xl"></i>
                 </div>
                 <div>
@@ -26,6 +29,10 @@
                     <p class="text-xs text-blue-300">Panel Admin</p>
                 </div>
             </div>
+            <!-- Tombol Tutup Sidebar di Mobile -->
+            <button type="button" onclick="closeAdminSidebar()" class="md:hidden text-blue-300 hover:text-white p-1 rounded-lg focus:outline-none" aria-label="Tutup Menu">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
 
         <!-- User Info -->
@@ -87,29 +94,59 @@
     </aside>
 
     <!-- Main Content -->
-    <div class="ml-64 flex-grow flex flex-col min-h-screen">
+    <div class="ml-0 md:ml-64 flex-grow flex flex-col min-h-screen w-full transition-all">
         <!-- Top Bar -->
-        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
-            <div>
-                <h2 class="text-sm font-semibold text-slate-500">{% block breadcrumb %}Dashboard{% endblock %}</h2>
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between shadow-sm sticky top-0 z-30">
+            <div class="flex items-center space-x-3">
+                <!-- Hamburger Button Mobile -->
+                <button type="button" onclick="openAdminSidebar()" class="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 focus:outline-none transition" aria-label="Buka Menu Admin">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <h2 class="text-xs sm:text-sm font-semibold text-slate-600 truncate">{% block breadcrumb %}Dashboard{% endblock %}</h2>
             </div>
-            <div class="text-xs text-slate-400">
+            <div class="text-xs text-slate-400 shrink-0">
                 <i class="fa-regular fa-clock mr-1"></i>
-                <span id="clock"></span>
+                <span id="clock" class="hidden sm:inline"></span>
+                <span id="clockMobile" class="sm:hidden font-mono font-medium"></span>
             </div>
         </header>
 
-        <main class="flex-grow p-8">
+        <main class="flex-grow p-4 sm:p-6 md:p-8">
             {% block content %}{% endblock %}
         </main>
     </div>
 
     <script>
+        function openAdminSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const backdrop = document.getElementById('adminBackdrop');
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.remove('-translate-x-full');
+            backdrop.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeAdminSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const backdrop = document.getElementById('adminBackdrop');
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.add('-translate-x-full');
+            backdrop.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
         function updateClock() {
             const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleString('id-ID', {weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
+            const fullClock = document.getElementById('clock');
+            const mobileClock = document.getElementById('clockMobile');
+            if (fullClock) {
+                fullClock.textContent = now.toLocaleString('id-ID', {weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
+            }
+            if (mobileClock) {
+                mobileClock.textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+            }
         }
-        updateClock(); setInterval(updateClock, 60000);
+        updateClock(); setInterval(updateClock, 30000);
     </script>
 </body>
 </html>

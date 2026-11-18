@@ -27,6 +27,7 @@
                         <p class="text-xs text-blue-200">Perpustakaan untuk Mahasiswa</p>
                     </div>
                 </div>
+                <!-- Desktop Navigation Links -->
                 <div class="hidden md:flex items-center space-x-1">
                     <a href="/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-800 transition {% if active_page == 'home' %}bg-blue-800{% endif %}">
                         <i class="fa-solid fa-house mr-1"></i> Beranda
@@ -53,7 +54,7 @@
                                 {{ current_user.full_name[0].upper() }}
                             </div>
                             <span class="text-sm font-medium">{{ current_user.full_name.split()[0] }}</span>
-                            <a href="/logout" class="text-xs text-blue-300 hover:text-white transition ml-1">
+                            <a href="/logout" class="text-xs text-blue-300 hover:text-white transition ml-1" title="Keluar">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                             </a>
                         </div>
@@ -66,6 +67,68 @@
                         </a>
                     {% endif %}
                 </div>
+
+                <!-- Mobile Hamburger Button (Hanya tampil di mobile) -->
+                <div class="flex items-center md:hidden">
+                    <button type="button" id="mobileMenuBtn" onclick="toggleMobileMenu()"
+                            class="p-2 rounded-xl text-blue-200 hover:text-white hover:bg-blue-800/80 focus:outline-none transition"
+                            aria-label="Buka Menu Navigasi">
+                        <i id="mobileMenuIcon" class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown (Hanya tampil di mobile saat dibuka) -->
+        <div id="mobileMenu" class="hidden md:hidden border-t border-blue-800/80 bg-blue-950/95 backdrop-blur-md px-4 pt-3 pb-5 space-y-2 transition-all">
+            <a href="/" class="flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition {% if active_page == 'home' %}bg-white/15{% endif %}">
+                <i class="fa-solid fa-house w-6 text-blue-300"></i> Beranda
+            </a>
+            <a href="/catalog" class="flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition {% if active_page == 'catalog' %}bg-white/15{% endif %}">
+                <i class="fa-solid fa-book-open w-6 text-blue-300"></i> Katalog Buku
+            </a>
+
+            {% if current_user %}
+                {% if current_user.role == 'visitor' %}
+                <a href="/my-loans" class="flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition {% if active_page == 'my_loans' %}bg-white/15{% endif %}">
+                    <i class="fa-solid fa-bookmark w-6 text-blue-300"></i> Pinjaman Saya
+                </a>
+                <a href="/borrow" class="flex items-center px-3 py-2.5 rounded-xl text-sm font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 transition border border-amber-400/30">
+                    <i class="fa-solid fa-hand-holding-hand w-6"></i> Pinjam Buku Baru
+                </a>
+                {% endif %}
+                {% if current_user.role == 'admin' %}
+                <a href="/admin" class="flex items-center px-3 py-2.5 rounded-xl text-sm font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 transition border border-amber-400/30">
+                    <i class="fa-solid fa-gauge w-6"></i> Panel Admin
+                </a>
+                {% endif %}
+
+                <!-- Mobile User Info & Logout -->
+                <div class="pt-3 mt-2 border-t border-blue-800 flex items-center justify-between px-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center font-bold text-sm text-white">
+                            {{ current_user.full_name[0].upper() }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white leading-tight">{{ current_user.full_name }}</p>
+                            <p class="text-xs text-blue-300 capitalize">{{ current_user.role }}</p>
+                        </div>
+                    </div>
+                    <a href="/logout" class="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition border border-rose-500/30">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                    </a>
+                </div>
+            {% else %}
+                <div class="pt-3 mt-2 border-t border-blue-800 grid grid-cols-2 gap-2">
+                    <a href="/login" class="flex items-center justify-center py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition">
+                        <i class="fa-solid fa-right-to-bracket mr-1.5"></i> Masuk
+                    </a>
+                    <a href="/register" class="flex items-center justify-center py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-xl text-sm font-bold transition">
+                        <i class="fa-solid fa-user-plus mr-1.5"></i> Daftar
+                    </a>
+                </div>
+            {% endif %}
+        </div>
             </div>
         </div>
     </nav>
@@ -106,6 +169,22 @@
         </div>
     </footer>
 
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const icon = document.getElementById('mobileMenuIcon');
+            if (!menu || !icon) return;
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-xmark');
+            } else {
+                menu.classList.add('hidden');
+                icon.classList.remove('fa-xmark');
+                icon.classList.add('fa-bars');
+            }
+        }
+    </script>
 </body>
 </html>
 
