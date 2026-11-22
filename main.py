@@ -140,6 +140,28 @@ def update_overdue_loans(conn):
 
 # ─── PUBLIK ─────────────────────────────────────────────────────────────────
 
+FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <path d="M18 13h25a4 4 0 0 1 4 4v30a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4z" fill="url(#gold)"/>
+  <path d="M25 13v16l6-4.5 6 4.5V13H25z" fill="#1e3a8a"/>
+  <rect x="18" y="44" width="29" height="4" rx="2" fill="#d97706"/>
+</svg>"""
+
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon():
+    return Response(content=FAVICON_SVG, media_type="image/svg+xml")
+
 # --- 0. DIAGNOSTIC / HEALTH CHECK ---
 @app.get("/ping")
 @app.get("/api/ping")
