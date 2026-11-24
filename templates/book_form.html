@@ -1,16 +1,16 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Tambah Buku Baru - Admin PustakaDigital{% endblock %}
-{% block breadcrumb %}Katalog / Tambah Buku Baru{% endblock %}
+{% block title %}{% if book %}Edit Buku: {{ book.title }} - Admin PustakaDigital{% else %}Tambah Buku Baru - Admin PustakaDigital{% endif %}{% endblock %}
+{% block breadcrumb %}Katalog / {% if book %}Edit Buku{% else %}Tambah Buku Baru{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-extrabold text-slate-900">Tambah Buku ke Inventaris</h1>
-            <p class="text-slate-500 text-sm mt-0.5">Input informasi buku baru ke sistem katalog.</p>
+            <h1 class="text-2xl font-extrabold text-slate-900">{% if book %}Edit Buku: {{ book.title }}{% else %}Tambah Buku ke Inventaris{% endif %}</h1>
+            <p class="text-slate-500 text-sm mt-0.5">{% if book %}Perbarui data katalog, lokasi rak, stok eksemplar, atau foto sampul buku.{% else %}Input informasi buku baru ke sistem katalog.{% endif %}</p>
         </div>
-        <a href="/catalog" class="text-sm font-semibold text-slate-600 hover:text-slate-900">&larr; Kembali</a>
+        <a href="/catalog" class="text-sm font-semibold text-slate-600 hover:text-slate-900 flex items-center">&larr; Kembali ke Katalog</a>
     </div>
 
     {% if error %}
@@ -20,58 +20,59 @@
     </div>
     {% endif %}
 
-    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-        <form action="/admin/books/new" method="POST" enctype="multipart/form-data" class="space-y-5">
+    <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <form action="{% if book %}/admin/books/edit/{{ book.id }}{% else %}/admin/books/new{% endif %}" method="POST" enctype="multipart/form-data" class="space-y-5">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">ISBN <span class="text-rose-500">*</span></label>
-                    <input type="text" name="isbn" required placeholder="978-xxx-xxx-xxx-x" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                    <input type="text" name="isbn" required placeholder="978-xxx-xxx-xxx-x" value="{{ book.isbn if book else '' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Kategori <span class="text-rose-500">*</span></label>
+                    {% set categories = ['Fiksi', 'Non-Fiksi', 'Teknologi', 'Sains', 'Sejarah & Sastra', 'Bisnis & Manajemen', 'Pengembangan Diri', 'Agama & Filsafat', 'Klasik'] %}
                     <select name="category" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="Fiksi">Fiksi</option>
-                        <option value="Non-Fiksi">Non-Fiksi</option>
-                        <option value="Teknologi">Teknologi & Komputer</option>
-                        <option value="Sains">Sains & Matematika</option>
-                        <option value="Sejarah & Sastra">Sejarah & Sastra</option>
-                        <option value="Bisnis & Manajemen">Bisnis & Manajemen</option>
-                        <option value="Pengembangan Diri">Pengembangan Diri</option>
-                        <option value="Agama & Filsafat">Agama & Filsafat</option>
-                        <option value="Klasik">Klasik</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if book and book.category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Judul Buku <span class="text-rose-500">*</span></label>
-                <input type="text" name="title" required placeholder="Judul lengkap buku" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" name="title" required placeholder="Judul lengkap buku" value="{{ book.title if book else '' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Penulis <span class="text-rose-500">*</span></label>
-                    <input type="text" name="author" required placeholder="Nama penulis" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" name="author" required placeholder="Nama penulis" value="{{ book.author if book else '' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Penerbit</label>
-                    <input type="text" name="publisher" placeholder="Nama penerbit" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" name="publisher" placeholder="Nama penerbit" value="{{ book.publisher if book and book.publisher else '' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 {% if book %}md:grid-cols-4{% else %}md:grid-cols-3{% endif %} gap-4">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Tahun Terbit</label>
-                    <input type="number" name="year" value="2024" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="number" name="year" value="{{ book.year if book and book.year else 2024 }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Lokasi Rak</label>
-                    <input type="text" name="shelf_location" placeholder="Rak B-03" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" name="shelf_location" placeholder="Rak B-03" value="{{ book.shelf_location if book and book.shelf_location else '' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Jumlah Eksemplar</label>
-                    <input type="number" name="total_copies" min="1" value="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Total Eksemplar</label>
+                    <input type="number" name="total_copies" min="1" value="{{ book.total_copies if book else 1 }}" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
+                {% if book %}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Stok Tersedia</label>
+                    <input type="number" name="available_copies" min="0" max="{{ book.total_copies }}" value="{{ book.available_copies }}" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-emerald-600">
+                </div>
+                {% endif %}
             </div>
 
-            <!-- Upload Foto Sampul Buku -->
+            <!-- Upload / Ganti Foto Sampul Buku -->
             <div class="pt-4 border-t border-slate-100">
                 <div class="flex items-center justify-between mb-2">
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -90,7 +91,7 @@
                     <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/40 rounded-2xl p-6 text-center transition cursor-pointer relative">
                         <input type="file" name="cover_file" id="cover_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
                         
-                        <div id="uploadPrompt" class="space-y-2">
+                        <div id="uploadPrompt" class="{% if book and book.cover_url %}hidden{% endif %} space-y-2">
                             <div class="w-14 h-14 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl shadow-sm">
                                 <i class="fa-solid fa-camera"></i>
                             </div>
@@ -104,19 +105,19 @@
                         </div>
 
                         <!-- Pratinjau Foto Sampul Buku -->
-                        <div id="previewContainer" class="hidden flex flex-col sm:flex-row items-center justify-center gap-5 text-left">
+                        <div id="previewContainer" class="{% if not book or not book.cover_url %}hidden{% endif %} flex flex-col sm:flex-row items-center justify-center gap-5 text-left">
                             <div class="w-28 h-36 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-white shrink-0 ring-1 ring-slate-200">
-                                <img id="coverPreview" src="" alt="Pratinjau Sampul" class="w-full h-full object-cover">
+                                <img id="coverPreview" src="{{ book.cover_url if book and book.cover_url else '' }}" alt="Pratinjau Sampul" class="w-full h-full object-cover">
                             </div>
                             <div class="space-y-2 text-center sm:text-left">
                                 <div class="flex items-center justify-center sm:justify-start space-x-2">
                                     <span class="text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">
-                                        <i class="fa-solid fa-circle-check mr-1"></i> Foto Siap
+                                        <i class="fa-solid fa-circle-check mr-1"></i> {% if book and book.cover_url %}Sampul Terpasang{% else %}Foto Siap{% endif %}
                                     </span>
                                     <span id="fileSizeLabel" class="text-xs text-slate-400 font-mono"></span>
                                 </div>
-                                <p id="fileNameLabel" class="text-sm font-semibold text-slate-800 break-all max-w-xs"></p>
-                                <p class="text-xs text-slate-500">Foto sampul akan otomatis dioptimalkan dan disimpan ke katalog buku.</p>
+                                <p id="fileNameLabel" class="text-sm font-semibold text-slate-800 break-all max-w-xs">{% if book and book.cover_url %}{{ book.title }}{% endif %}</p>
+                                <p class="text-xs text-slate-500">Klik di sini untuk mengganti foto sampul dengan yang baru.</p>
                                 <button type="button" onclick="removeSelectedFile(event)" class="mt-1 text-xs text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center px-3 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
                                     <i class="fa-solid fa-trash-can mr-1.5"></i> Ganti / Hapus Foto
                                 </button>
@@ -128,28 +129,49 @@
                 <!-- Mode 2: Input URL Online -->
                 <div id="urlModeContainer" class="hidden space-y-2 mt-2">
                     <div class="relative">
-                        <input type="url" name="cover_url" id="cover_url" placeholder="https://images.unsplash.com/... atau URL gambar lainnya" 
+                        <input type="url" name="cover_url" id="cover_url" value="{{ book.cover_url if book and book.cover_url else '' }}" placeholder="https://images.unsplash.com/... atau URL gambar lainnya" 
                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                oninput="previewFromUrl(this.value)">
                         <i class="fa-solid fa-link absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
                     </div>
-                    <div id="urlPreviewBox" class="hidden mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-3">
-                        <img id="urlPreviewImg" src="" alt="URL Preview" class="w-12 h-16 object-cover rounded-lg border border-slate-200">
+                    <div id="urlPreviewBox" class="{% if not book or not book.cover_url %}hidden{% endif %} mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <img id="urlPreviewImg" src="{{ book.cover_url if book and book.cover_url else '' }}" alt="URL Preview" class="w-12 h-16 object-cover rounded-lg border border-slate-200">
                         <div class="text-xs text-slate-600">
                             <span class="font-semibold text-emerald-600"><i class="fa-solid fa-check mr-1"></i>URL Gambar Siap Digunakan</span>
-                            <p class="text-slate-400 text-[11px] truncate max-w-md" id="urlPreviewText"></p>
+                            <p class="text-slate-400 text-[11px] truncate max-w-md" id="urlPreviewText">{{ book.cover_url if book and book.cover_url else '' }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Tombol Aksi -->
+            {% if book %}
+            <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <button type="submit" form="deleteBookForm" class="text-xs text-rose-600 hover:text-white hover:bg-rose-600 font-semibold inline-flex items-center justify-center px-4 py-2.5 bg-rose-50 rounded-xl transition border border-rose-200 cursor-pointer">
+                    <i class="fa-solid fa-trash-can mr-1.5"></i> Hapus Buku dari Katalog
+                </button>
+                <div class="flex items-center gap-2.5 sm:gap-3 justify-end">
+                    <a href="/catalog" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition text-center">Batal</a>
+                    <button type="submit" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition text-center flex items-center justify-center">
+                        <i class="fa-solid fa-check mr-2"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+            {% else %}
             <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3">
                 <a href="/catalog" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition text-center">Batal</a>
                 <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition text-center flex items-center justify-center">
                     <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Buku
                 </button>
             </div>
+            {% endif %}
         </form>
+
+        {% if book %}
+        <!-- Hidden Form untuk Hapus Buku -->
+        <form id="deleteBookForm" action="/admin/books/delete/{{ book.id }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus buku \'{{ book.title }}\'? Semua riwayat sirkulasi lama terkait buku ini juga akan dihapus secara permanen.')">
+        </form>
+        {% endif %}
     </div>
 </div>
 

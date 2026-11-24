@@ -294,6 +294,7 @@ async def home(request: Request):
         )
 
 @app.get("/catalog", response_class=HTMLResponse)
+@app.get("/admin/books", response_class=HTMLResponse)
 async def catalog(request: Request, q: str = None):
     current_user = get_current_user(request)
     conn = get_db()
@@ -307,10 +308,20 @@ async def catalog(request: Request, q: str = None):
     books = cursor.fetchall()
     conn.close()
 
+    success_msg = request.session.pop("catalog_success", None)
+    error_msg = request.session.pop("catalog_error", None)
+
     return templates.TemplateResponse(
         request=request,
         name="catalog.html",
-        context={"active_page": "catalog", "current_user": current_user, "books": books, "query": q}
+        context={
+            "active_page": "catalog",
+            "current_user": current_user,
+            "books": books,
+            "query": q,
+            "success_msg": success_msg,
+            "error_msg": error_msg
+        }
     )
 
 # ─── AUTH ────────────────────────────────────────────────────────────────────
@@ -706,6 +717,169 @@ async def admin_create_book(
                      "error": f"ISBN '{isbn}' sudah terdaftar dalam sistem."}
         )
     conn.close()
+    request.session["catalog_success"] = f"Buku '{title.strip()}' berhasil ditambahkan ke inventaris katalog."
+    return RedirectResponse(url="/catalog", status_code=303)
+
+
+# ─── ADMIN: EDIT & HAPUS BUKU KATALOG ───────────────────────────────────────
+
+@app.get("/admin/books/edit/{book_id}", response_class=HTMLResponse)
+async def admin_edit_book_form(request: Request, book_id: int):
+    current_user = require_admin(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM books WHERE id=?", (book_id,))
+    book = cursor.fetchone()
+    conn.close()
+
+    if not book:
+        return RedirectResponse(url="/catalog", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="book_form.html",
+        context={
+            "active_page": "catalog",
+            "current_user": current_user,
+            "book": book,
+            "error": None
+        }
+    )
+
+@app.post("/admin/books/edit/{book_id}", response_class=HTMLResponse)
+async def admin_update_book(
+    request: Request,
+    book_id: int,
+    isbn: str = Form(...),
+    title: str = Form(...),
+    author: str = Form(...),
+    publisher: str = Form(None),
+    category: str = Form(...),
+    year: int = Form(2024),
+    shelf_location: str = Form(None),
+    total_copies: int = Form(1),
+    available_copies: int = Form(None),
+    cover_url: str = Form(None),
+    cover_base64: str = Form(None),
+    cover_file: UploadFile = File(None)
+):
+    current_user = require_admin(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM books WHERE id=?", (book_id,))
+    book = cursor.fetchone()
+    if not book:
+        conn.close()
+        return RedirectResponse(url="/catalog", status_code=303)
+
+    # Prioritas gambar sampul: cover_base64 -> cover_file -> cover_url -> existing cover
+    final_cover = None
+    if cover_base64 and cover_base64.strip() and cover_base64.strip().startswith("data:image"):
+        final_cover = cover_base64.strip()
+    elif cover_file and cover_file.filename:
+        try:
+            content = await cover_file.read()
+            if content and len(content) > 0:
+                ct = cover_file.content_type or "image/jpeg"
+                b64 = base64.b64encode(content).decode("utf-8")
+                final_cover = f"data:{ct};base64,{b64}"
+        except Exception as e:
+            print(f"Cover upload read notice: {e}")
+
+    if not final_cover and cover_url and cover_url.strip():
+        final_cover = cover_url.strip()
+
+    if not final_cover:
+        final_cover = book["cover_url"]
+
+    # Hitung available copies secara otomatis jika tidak diset
+    if available_copies is None:
+        borrowed_count = max(0, book["total_copies"] - book["available_copies"])
+        available_copies = max(0, total_copies - borrowed_count)
+    else:
+        available_copies = min(total_copies, max(0, available_copies))
+
+    try:
+        # Cek apakah ISBN dipakai oleh buku lain selain buku ini
+        cursor.execute("SELECT id FROM books WHERE isbn=? AND id != ?", (isbn.strip(), book_id))
+        if cursor.fetchone():
+            conn.close()
+            return templates.TemplateResponse(
+                request=request,
+                name="book_form.html",
+                context={
+                    "active_page": "catalog",
+                    "current_user": current_user,
+                    "book": book,
+                    "error": f"ISBN '{isbn}' sudah digunakan oleh judul buku lain."
+                }
+            )
+
+        cursor.execute("""
+            UPDATE books
+            SET isbn=?, title=?, author=?, publisher=?, category=?, year=?, shelf_location=?, cover_url=?, total_copies=?, available_copies=?
+            WHERE id=?
+        """, (isbn.strip(), title.strip(), author.strip(),
+              publisher.strip() if publisher else None,
+              category, year,
+              shelf_location.strip() if shelf_location else None,
+              final_cover, total_copies, available_copies, book_id))
+        conn.commit()
+        request.session["catalog_success"] = f"Katalog buku '{title.strip()}' berhasil diperbarui!"
+    except Exception as e:
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="book_form.html",
+            context={
+                "active_page": "catalog",
+                "current_user": current_user,
+                "book": book,
+                "error": f"Gagal memperbarui buku: {str(e)}"
+            }
+        )
+
+    conn.close()
+    return RedirectResponse(url="/catalog", status_code=303)
+
+@app.post("/admin/books/delete/{book_id}")
+async def admin_delete_book(request: Request, book_id: int):
+    current_user = require_admin(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM books WHERE id=?", (book_id,))
+    book = cursor.fetchone()
+    if not book:
+        conn.close()
+        return RedirectResponse(url="/catalog", status_code=303)
+
+    # Validasi pinjaman aktif
+    cursor.execute("SELECT COUNT(*) FROM loans WHERE book_id=? AND status IN ('BORROWED', 'OVERDUE')", (book_id,))
+    active_loans = cursor.fetchone()[0]
+    if active_loans > 0:
+        conn.close()
+        request.session["catalog_error"] = f"Tidak dapat menghapus buku '{book['title']}' karena sedang dipinjam ({active_loans} peminjaman aktif)."
+        return RedirectResponse(url="/catalog", status_code=303)
+
+    try:
+        cursor.execute("DELETE FROM loans WHERE book_id=?", (book_id,))
+        cursor.execute("DELETE FROM books WHERE id=?", (book_id,))
+        conn.commit()
+        request.session["catalog_success"] = f"Buku '{book['title']}' berhasil dihapus dari inventaris katalog."
+    except Exception as e:
+        request.session["catalog_error"] = f"Gagal menghapus buku: {str(e)}"
+    finally:
+        conn.close()
+
     return RedirectResponse(url="/catalog", status_code=303)
 
 

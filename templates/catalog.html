@@ -17,6 +17,20 @@
         {% endif %}
     </div>
 
+    {% if success_msg %}
+    <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm flex items-center shadow-sm">
+        <i class="fa-solid fa-circle-check mr-3 text-lg"></i>
+        <span>{{ success_msg }}</span>
+    </div>
+    {% endif %}
+
+    {% if error_msg %}
+    <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center shadow-sm">
+        <i class="fa-solid fa-circle-exclamation mr-3 text-lg"></i>
+        <span>{{ error_msg }}</span>
+    </div>
+    {% endif %}
+
     <!-- Search Bar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3">
         <form action="/catalog" method="GET" class="flex-grow flex flex-col md:flex-row gap-3">
@@ -39,7 +53,7 @@
     <!-- Book Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {% for book in books %}
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col relative group">
             <div class="h-48 w-full bg-slate-100 relative overflow-hidden">
                 <img src="{{ book.cover_url }}" alt="{{ book.title }}" class="w-full h-full object-cover">
                 <div class="absolute top-2 right-2">
@@ -47,6 +61,13 @@
                         {{ book.category }}
                     </span>
                 </div>
+                {% if current_user and current_user.role == 'admin' %}
+                <div class="absolute top-2 left-2 z-10">
+                    <a href="/admin/books/edit/{{ book.id }}" title="Edit Informasi Buku" class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md flex items-center gap-1 transition">
+                        <i class="fa-solid fa-pen-to-square text-[11px]"></i> Edit
+                    </a>
+                </div>
+                {% endif %}
             </div>
             <div class="p-5 flex flex-col flex-grow">
                 <p class="text-xs font-mono text-slate-400">{{ book.isbn }}</p>
@@ -64,13 +85,18 @@
                         </span>
                     </div>
                     {% if current_user and current_user.role == 'admin' %}
-                        {% if book.available_copies > 0 %}
-                        <a href="/admin/loans/new?book_id={{ book.id }}" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition">
-                            Pinjamkan &rarr;
-                        </a>
-                        {% else %}
-                        <span class="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">Habis</span>
-                        {% endif %}
+                        <div class="flex items-center space-x-1.5">
+                            <a href="/admin/books/edit/{{ book.id }}" title="Edit Katalog Buku" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition flex items-center border border-amber-200">
+                                <i class="fa-solid fa-pen-to-square mr-1 text-[11px]"></i> Edit
+                            </a>
+                            {% if book.available_copies > 0 %}
+                            <a href="/admin/loans/new?book_id={{ book.id }}" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition flex items-center">
+                                Pinjamkan &rarr;
+                            </a>
+                            {% else %}
+                            <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">Habis</span>
+                            {% endif %}
+                        </div>
                     {% elif current_user and current_user.role == 'visitor' %}
                         {% if book.available_copies > 0 %}
                         <a href="/borrow?book_id={{ book.id }}" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
